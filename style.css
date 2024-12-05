@@ -1,5 +1,5 @@
 :root {
-    --primary-color: #4a90e2;
+    --primary-color: #2a9b7d;
     --secondary-color: #5f6d7a;
     --accent-color: #34d399;
     --warning-color: #f43f5e;
@@ -18,7 +18,7 @@
 
 body {
     font-family: 'Inter', sans-serif;
-    background: linear-gradient(135deg, #43d881 0%, #238ec4 100%);
+    background: linear-gradient(135deg, #009e6f 0%, #015b31 100%);
     color: var(--text-dark);
     line-height: 1.6;
     min-height: 100vh;
