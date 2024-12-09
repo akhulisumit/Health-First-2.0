@@ -64,7 +64,6 @@ document.getElementById('symptomForm').addEventListener('submit', async function
         Please provide a detailed medical analysis with the following structure:
 
         1. Recommended Actions:
-           - Over-the-counter medications (if applicable)
            - Home care recommendations
            - Lifestyle modifications
 
