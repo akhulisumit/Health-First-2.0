@@ -1,95 +1,68 @@
-// Symptom Button Selection
+const API_KEY = 'AIzaSyC56g30u8bjTqn4cHd5P1eolfe5iwHMc7E'; // 🔥 Replace with your real API key
+
+const form = document.getElementById('symptomForm');
+const loading = document.getElementById('loading');
+const results = document.getElementById('results');
+const resultContent = document.getElementById('resultContent');
+
+// Initially hide loading and results
+loading.style.display = 'none';
+results.style.display = 'none';
+
+// Handle symptom button clicks
 document.querySelectorAll('.symptom-button').forEach(button => {
-    button.addEventListener('click', function() {
-        this.classList.toggle('selected');
+    button.addEventListener('click', () => {
+        button.classList.toggle('selected');
     });
 });
 
-// Medical History Button Selection
+// Handle medical history button clicks
 document.querySelectorAll('.medical-history-button').forEach(button => {
-    button.addEventListener('click', function() {
-        // If "None" is selected, deselect all other options
-        if (this.dataset.history === 'None') {
-            document.querySelectorAll('.medical-history-button').forEach(btn => {
-                btn.classList.remove('selected');
-            });
-            this.classList.add('selected');
-        } else {
-            // Deselect "None" if another option is selected
-            const noneButton = document.querySelector('.medical-history-button[data-history="None"]');
-            noneButton.classList.remove('selected');
-            this.classList.toggle('selected');
-        }
+    button.addEventListener('click', () => {
+        button.classList.toggle('selected');
     });
 });
 
-const API_KEY = 'AIzaSyDAzZPZ3-JmLCuJmC0QQG2ouIx0vQTsIlI';
-
-document.getElementById('symptomForm').addEventListener('submit', async function(e) {
+form.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    // Get input values
-    const age = document.getElementById('age').value;
+    // Collect input data
+    const age = document.getElementById('age').value.trim();
     const gender = document.getElementById('gender').value;
-    const selectedSymptoms = Array.from(document.querySelectorAll('.symptom-button.selected'))
-        .map(button => button.dataset.symptom);
-    const medicalHistory = Array.from(document.querySelectorAll('.medical-history-button.selected'))
-        .map(button => button.dataset.history);
-    const additionalInfo = document.getElementById('additionalInfo').value;
-    
-    if (selectedSymptoms.length === 0) {
-        alert('Please select at least one symptom');
+    const additionalInfo = document.getElementById('additionalInfo').value.trim();
+
+    const selectedSymptoms = Array.from(document.querySelectorAll('.symptom-button.selected')).map(btn => btn.dataset.symptom);
+    const selectedMedicalHistory = Array.from(document.querySelectorAll('.medical-history-button.selected')).map(btn => btn.dataset.history);
+
+    // Basic validation
+    if (!age || !gender || selectedSymptoms.length === 0) {
+        alert('Please fill out all required fields and select at least one symptom.');
         return;
     }
 
-    // Show loading state
-    const loadingDiv = document.getElementById('loading');
-    const resultsDiv = document.getElementById('results');
-    const resultContent = document.getElementById('resultContent');
-    
-    loadingDiv.style.display = 'block';
-    resultsDiv.style.display = 'none';
-    
-    // Construct prompt for Gemini
+    // Construct prompt
     const prompt = `
-        Medical Analysis Request:
+Patient details:
+- Age: ${age}
+- Gender: ${gender}
+- Symptoms: ${selectedSymptoms.join(', ')}
+- Medical History: ${selectedMedicalHistory.length ? selectedMedicalHistory.join(', ') : 'None'}
+${additionalInfo ? '- Additional Info: ' + additionalInfo : ''}
 
-        Patient Information:
-        - Age: ${age}
-        - Gender: ${gender}
-        - Reported Symptoms: ${selectedSymptoms.join(', ')}
-        - Medical History: ${medicalHistory.length > 0 ? medicalHistory.join(', ') : 'None reported'}
-        - Additional Information: ${additionalInfo || 'No additional details provided'}
+Based on the above, provide:
+1. Possible conditions or diseases.
+2. Recommended do's and don'ts.
+3. Suggested next steps.
+`;
 
-        Please provide a detailed medical analysis with the following structure:
+    // Show loading
+    loading.style.display = 'block';
+    results.style.display = 'none';
+    resultContent.innerHTML = '';
 
-        1. Recommended Actions:
-           - Home care recommendations
-           - Lifestyle modifications
-
-        2. Important Guidelines:
-           DO's:
-           - Specific actions to manage symptoms
-           - Preventive measures
-           - Monitoring recommendations
-
-           DON'Ts:
-           - Activities to avoid
-           - Dietary restrictions
-           - Risk factors to minimize
-
-        3. Red Flags:
-           - Warning signs requiring immediate medical attention
-           - Emergency symptoms to watch for
-
-
-        Please provide specific, actionable advice while maintaining appropriate medical disclaimers.
-        And also give the results in a styled html format.
-    `;
-
+    // Call Gemini API
     try {
-        // Call Gemini API
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -102,25 +75,25 @@ document.getElementById('symptomForm').addEventListener('submit', async function
         });
 
         if (!response.ok) {
-            throw new Error('API request failed');
+            const errorData = await response.json().catch(() => null);
+            console.error('API Error:', errorData);
+            throw new Error(errorData?.error?.message || `API call failed with status ${response.status}`);
         }
 
         const data = await response.json();
-        const analysis = data.candidates[0].content.parts[0].text;
+        console.log('Gemini Response:', data);
 
-        // Hide loading, show results
-        loadingDiv.style.display = 'none';
-        resultContent.innerHTML = `
-            <div>${analysis}</div>
-        `;
-        resultsDiv.style.display = 'block';
+        const answer = data.candidates?.[0]?.content?.parts?.[0]?.text || "No answer received from AI.";
+
+        // Show result
+        loading.style.display = 'none';
+        results.style.display = 'block';
+        resultContent.innerHTML = answer.replace(/\n/g, '<br>'); // Format newlines nicely
 
     } catch (error) {
-        loadingDiv.style.display = 'none';
-        resultContent.innerHTML = `
-            <p style="color: red;">Error: ${error.message}</p>
-            <p>Please try again later or contact support if the problem persists.</p>
-        `;
-        resultsDiv.style.display = 'block';
+        console.error('Error:', error);
+        loading.style.display = 'none';
+        results.style.display = 'block';
+        resultContent.innerHTML = `<span style="color:red;">Error: ${error.message}</span>`;
     }
 });
